@@ -1,0 +1,7 @@
+{
+  "name": "JPP Diary v1.0",
+  "description": "AI-powered personal journal with sentiment analysis and emotional tracking.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

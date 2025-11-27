@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="AI-powered personal journal with sentiment analysis" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png">
+    
+    <title>Gemini Diary</title>
+    <!-- Keeping Tailwind CDN for simplicity unless you want to set up PostCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    
+    <!-- Leaflet for OpenStreetMap (Free Map Fallback) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <style>
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155; 
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #475569; 
+      }
+      /* Map Selection Cursor */
+      .cursor-crosshair {
+        cursor: crosshair !important;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
+    "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@testing-library/jest-dom": "https://aistudiocdn.com/@testing-library/jest-dom@^6.9.1",
+    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.1.0",
+    "@testing-library/react": "https://aistudiocdn.com/@testing-library/react@^16.3.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
+    "vitest": "https://aistudiocdn.com/vitest@^4.0.14",
+    "vitest/": "https://aistudiocdn.com/vitest@^4.0.14/",
+    "@googlemaps/markerclusterer": "https://esm.sh/@googlemaps/markerclusterer@2.5.3",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-200 transition-colors duration-300">
+    <div id="root"></div>
+    <!-- Entry point for Vite -->
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

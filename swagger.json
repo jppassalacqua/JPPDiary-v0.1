@@ -1,0 +1,205 @@
+
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Gemini Diary API",
+    "description": "Backend API for Gemini Diary application managing users, entries, and catalog items.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local Server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "bio": { "type": "string" },
+          "role": { "type": "string", "enum": ["user", "admin"] },
+          "preferences": { "type": "object" }
+        },
+        "required": ["id", "username"]
+      },
+      "Entry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "timestamp": { "type": "integer", "format": "int64" },
+          "content": { "type": "string" },
+          "mode": { "type": "string", "enum": ["Manual", "Chat", "Interview"] },
+          "analysis": { 
+            "type": "object",
+            "properties": {
+                "mood": { "type": "string" },
+                "sentimentScore": { "type": "number" },
+                "summary": { "type": "string" },
+                "keywords": { "type": "array", "items": { "type": "string" } },
+                "manualTags": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "location": { 
+              "type": "object",
+              "properties": {
+                  "lat": { "type": "number" },
+                  "lng": { "type": "number" }
+              }
+          },
+          "images": { "type": "array", "items": { "type": "string" }, "description": "Array of Base64 strings" },
+          "audio": { "type": "array", "items": { "type": "string" }, "description": "Array of Base64 strings" }
+        },
+        "required": ["id", "userId", "timestamp"]
+      },
+      "CatalogItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "sourceEntryId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["Person", "Location", "Event", "Concept", "Book", "Movie", "Other"] },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "timestamp": { "type": "integer" }
+        },
+        "required": ["id", "userId", "name", "type"]
+      }
+    }
+  },
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "Get all users",
+        "description": "Retrieve a list of all registered users (Admin only).",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or Update User",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+        },
+        "responses": {
+          "200": { "description": "User saved successfully" }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "delete": {
+        "summary": "Delete User",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User and all related data deleted" }
+        }
+      }
+    },
+    "/entries": {
+      "get": {
+        "summary": "Get Entries",
+        "parameters": [
+          { "in": "query", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of diary entries sorted by date descending",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Entry" } } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Save Entry",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Entry" } } }
+        },
+        "responses": {
+          "200": { "description": "Entry saved successfully" }
+        }
+      }
+    },
+    "/entries/{entryId}": {
+      "delete": {
+        "summary": "Delete Entry",
+        "parameters": [
+          { "in": "path", "name": "entryId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Entry deleted" }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "summary": "Get Catalog",
+        "parameters": [
+          { "in": "query", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of catalog items",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogItem" } } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Save Catalog Item",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItem" } } }
+        },
+        "responses": {
+          "200": { "description": "Item saved successfully" }
+        }
+      }
+    },
+    "/catalog/{itemId}": {
+      "delete": {
+        "summary": "Delete Catalog Item",
+        "parameters": [
+          { "in": "path", "name": "itemId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Item deleted" }
+        }
+      }
+    },
+    "/admin/export": {
+        "get": {
+            "summary": "Export Full System",
+            "description": "Get a JSON dump of all users, entries, and catalog items.",
+            "responses": {
+                "200": {
+                    "description": "Full backup JSON",
+                    "content": { "application/json": { "schema": { "type": "object" } } }
+                }
+            }
+        }
+    },
+    "/admin/import": {
+        "post": {
+            "summary": "Import Full System",
+            "description": "Replace the current database with the provided backup JSON.",
+            "requestBody": {
+                "required": true,
+                "content": { "application/json": { "schema": { "type": "object" } } }
+            },
+            "responses": {
+                "200": { "description": "System restored successfully" }
+            }
+        }
+    }
+  }
+}
