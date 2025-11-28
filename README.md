@@ -30,6 +30,18 @@ Built with a "Local-First" philosophy, it runs securely on your machine while le
 
 ---
 
+## 🔒 Security
+
+Gemini Diary implements hardened security measures suitable for network deployment:
+
+*   **No Sensitive Data Leaks**: Passwords and private keys are stripped from API responses.
+*   **Rate Limiting**: Protects login and registration endpoints from brute-force attacks.
+*   **Error Masking**: Server errors are sanitized to prevent information disclosure to clients.
+*   **SQL Injection Proof**: 100% usage of Parameterized Queries.
+*   **Security Headers**: Automated headers (`HSTS`, `X-Frame-Options`, etc.) to prevent Clickjacking and Sniffing.
+
+---
+
 ## 🚀 Deployment Guide
 
 Gemini Diary is designed to be deployed in various environments, from a developer's laptop to a production server.

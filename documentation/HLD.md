@@ -54,10 +54,16 @@ graph TD
     *   `tags`: Normalized user-defined tags.
     *   `logs`: System audit trail.
 
-### 3.2 Security
-*   **Authentication**: Session-based via LocalStorage tokens.
-*   **Passwords**: SHA-256 Client-side hashing.
-*   **API Keys**: Stored in environment variables or user preferences.
+### 3.2 Security Architecture
+The application employs a **Defense in Depth** strategy to protect local and network-accessible data.
+
+*   **Traffic Control**: Rate limiting middleware prevents brute-force attacks on authentication endpoints.
+*   **Header Hardening**: Standard HTTP security headers (`HSTS`, `X-Content-Type-Options`, `X-Frame-Options`) protect against client-side attacks like Clickjacking and MIME sniffing.
+*   **Data Sanitization**:
+    *   **Output**: The API layer strictly filters sensitive fields (e.g., passwords) from JSON responses before they leave the server.
+    *   **Input**: Strict UUID validation prevents malformed queries from reaching the database layer.
+*   **Error Masking**: Internal server errors and database schema details are logged server-side but never exposed to the client, preventing Information Disclosure.
+*   **SQL Injection Prevention**: All database interactions use Parameterized Queries (Prepared Statements).
 
 ## 4. Key Features
 | Feature | Description | Tech Implementation |

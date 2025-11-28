@@ -11,15 +11,44 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 const DB_FILE = path.join(__dirname, 'gemini_diary.db');
 
-// Security & Middleware
-app.disable('x-powered-by'); 
+// --- Security Middleware ---
+
+// 1. Basic Security Headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    app.disable('x-powered-by');
+    next();
+});
+
+// 2. Simple Rate Limiter (In-Memory)
+const rateLimitMap = new Map();
+const rateLimiter = (windowMs, max) => (req, res, next) => {
+    const ip = req.ip;
+    const now = Date.now();
+    const windowStart = now - windowMs;
+    
+    const requestLog = rateLimitMap.get(ip) || [];
+    const requestsInWindow = requestLog.filter(time => time > windowStart);
+    
+    if (requestsInWindow.length >= max) {
+        return res.status(429).json({ error: "Too many requests, please try again later." });
+    }
+    
+    requestsInWindow.push(now);
+    rateLimitMap.set(ip, requestsInWindow);
+    next();
+};
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); 
 
 // Initialize Database
 const db = new sqlite3.Database(DB_FILE, (err) => {
     if (err) {
-        console.error('Error opening database', err.message);
+        console.error('CRITICAL: Error opening database', err.message);
     } else {
         console.log('Connected to the SQLite database.');
         db.run("PRAGMA foreign_keys = ON"); // Enable FK support
@@ -177,8 +206,30 @@ const safeJsonParse = (str, fallback) => {
     }
 };
 
-const parseUser = (row) => ({...row, preferences: safeJsonParse(row.preferences, {})});
+// SECURITY: Sanitize User Object (Strip Password)
+const parseUser = (row) => {
+    // Destructure password out to exclude it from the returned object
+    const { password, ...safeUser } = row;
+    return {
+        ...safeUser, 
+        preferences: safeJsonParse(row.preferences, {})
+    };
+};
+
 const parseLog = (row) => ({...row, data: safeJsonParse(row.data, null)});
+
+// SECURITY: Error Masking
+const handleServerErr = (res, err, context) => {
+    console.error(`[SERVER ERROR] ${context}:`, err);
+    // Never send raw DB errors to client
+    res.status(500).json({ error: "Internal Server Error" });
+};
+
+// SECURITY: Input Validation
+const isValidUUID = (uuid) => {
+    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return regex.test(uuid);
+};
 
 // --- API Routes ---
 
@@ -188,14 +239,20 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get('/users', async (req, res) => {
     try {
         const rows = await dbAll("SELECT * FROM users");
+        // Output Sanitization applied here
         res.json(rows.map(parseUser));
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'GET /users');
     }
 });
 
-app.post('/users', async (req, res) => {
+// Apply stricter rate limit to login/creation endpoints
+app.post('/users', rateLimiter(15 * 60 * 1000, 50), async (req, res) => {
     const user = req.body;
+    
+    // Basic Validation
+    if (!user.username || !user.id) return res.status(400).json({ error: "Invalid payload" });
+
     const preferences = JSON.stringify(user.preferences || {});
     try {
         await dbRun(
@@ -204,23 +261,25 @@ app.post('/users', async (req, res) => {
         );
         res.json({ message: "User saved", id: user.id });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'POST /users');
     }
 });
 
 app.delete('/users/:userId', async (req, res) => {
+    if (!isValidUUID(req.params.userId)) return res.status(400).json({ error: "Invalid User ID" });
     try {
         await dbRun("DELETE FROM users WHERE id = ?", [req.params.userId]);
         res.json({ message: "User deleted" });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'DELETE /users');
     }
 });
 
 // Entries
 app.get('/entries', async (req, res) => {
     const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ error: "Missing userId parameter" });
+    // Input Validation
+    if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: "Invalid or Missing userId" });
 
     try {
         // Fetch Entries
@@ -260,13 +319,15 @@ app.get('/entries', async (req, res) => {
         res.json(response);
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'GET /entries');
     }
 });
 
 app.post('/entries', async (req, res) => {
     const entry = req.body;
+    
+    if (!entry.id || !entry.userId) return res.status(400).json({ error: "Invalid Entry Data" });
+
     const analysis = JSON.stringify(entry.analysis || {});
     const location = entry.location ? JSON.stringify(entry.location) : null;
     const emptyJson = JSON.stringify([]);
@@ -345,30 +406,30 @@ app.post('/entries', async (req, res) => {
 
     } catch (err) {
         await dbRun("ROLLBACK");
-        console.error("Save Entry Error:", err);
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'POST /entries');
     }
 });
 
 app.delete('/entries/:entryId', async (req, res) => {
+    if (!isValidUUID(req.params.entryId)) return res.status(400).json({ error: "Invalid Entry ID" });
     try {
         await dbRun("DELETE FROM entries WHERE id = ?", [req.params.entryId]);
         res.json({ message: "Entry deleted" });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'DELETE /entries');
     }
 });
 
 // Catalog (Enhanced)
 app.get('/catalog', async (req, res) => {
     const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: "Invalid or Missing userId" });
     try {
         const rows = await dbAll("SELECT * FROM catalog WHERE userId = ? ORDER BY name ASC", [userId]);
         // Note: For now we return raw rows, in future we could join catalog_tags
         res.json(rows.map(row => ({...row, tags: []}))); // Todo: Fetch real tags if needed
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'GET /catalog');
     }
 });
 
@@ -396,16 +457,17 @@ app.post('/catalog', async (req, res) => {
         res.json({ message: "Catalog item saved", id: item.id });
     } catch (err) {
         await dbRun("ROLLBACK");
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'POST /catalog');
     }
 });
 
 app.delete('/catalog/:itemId', async (req, res) => {
+    if (!isValidUUID(req.params.itemId)) return res.status(400).json({ error: "Invalid Catalog ID" });
     try {
         await dbRun("DELETE FROM catalog WHERE id = ?", [req.params.itemId]);
         res.json({ message: "Catalog item deleted" });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'DELETE /catalog');
     }
 });
 
@@ -419,7 +481,7 @@ app.get('/settings', async (req, res) => {
         });
         res.json(settings);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'GET /settings');
     }
 });
 
@@ -435,7 +497,7 @@ app.post('/settings', async (req, res) => {
         res.json({ message: "Settings saved" });
     } catch (err) {
         await dbRun("ROLLBACK");
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'POST /settings');
     }
 });
 
@@ -449,7 +511,9 @@ app.post('/logs', async (req, res) => {
         );
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        // Logs failing to save shouldn't crash the app or leak info
+        console.error("Log Error:", err);
+        res.status(500).json({ error: "Logging failed" });
     }
 });
 
@@ -459,7 +523,7 @@ app.get('/admin/logs', async (req, res) => {
         const rows = await dbAll("SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?", [limit]);
         res.json(rows.map(parseLog));
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'GET /admin/logs');
     }
 });
 
@@ -468,7 +532,7 @@ app.delete('/admin/logs', async (req, res) => {
         await dbRun("DELETE FROM logs WHERE timestamp < ?", [req.query.before]);
         res.json({ deleted: 0 });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'DELETE /admin/logs');
     }
 });
 
@@ -477,7 +541,9 @@ app.get('/admin/export', async (req, res) => {
     try {
         const backup = { timestamp: Date.now(), users: [], entries: [], catalog: [], media: [], tags: [], entry_tags: [], entry_entities: [], catalog_tags: [] };
         
+        // Export with password stripping
         backup.users = (await dbAll("SELECT * FROM users")).map(parseUser);
+        
         backup.entries = (await dbAll("SELECT * FROM entries")).map(row => ({...row, analysis: safeJsonParse(row.analysis, {}), location: safeJsonParse(row.location, {})}));
         backup.catalog = await dbAll("SELECT * FROM catalog");
         backup.media = await dbAll("SELECT * FROM media");
@@ -488,7 +554,7 @@ app.get('/admin/export', async (req, res) => {
 
         res.json(backup);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'GET /admin/export');
     }
 });
 
@@ -504,7 +570,7 @@ app.post('/admin/import', async (req, res) => {
         // 1. Users
         if (data.users) {
             const stmt = db.prepare(`INSERT OR REPLACE INTO users (id, username, password, displayName, bio, role, preferences) VALUES (?, ?, ?, ?, ?, ?, ?)`);
-            data.users.forEach(u => stmt.run(u.id, u.username, u.password, u.displayName, u.bio, u.role, JSON.stringify(u.preferences)));
+            data.users.forEach(u => stmt.run(u.id, u.username, u.password || 'RESET_ME', u.displayName, u.bio, u.role, JSON.stringify(u.preferences)));
             stmt.finalize();
         }
 
@@ -563,7 +629,7 @@ app.post('/admin/import', async (req, res) => {
         res.json({ message: "Imported successfully" });
     } catch (err) {
         await dbRun("ROLLBACK");
-        res.status(500).json({ error: err.message });
+        handleServerErr(res, err, 'POST /admin/import');
     }
 });
 

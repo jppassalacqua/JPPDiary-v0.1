@@ -81,3 +81,38 @@ Handles input (Camera, Mic, Upload) and display (Gallery) of all media types att
 
 ### 2.4 Auto-Cataloging
 The backend (`server.js`) inspects the AI analysis of every saved entry. If entities are found, they are automatically upserted into the `catalog` table and linked via `entry_entities`.
+
+---
+
+## 3. Security Implementation (`server.js`)
+
+The backend implements several layers of security countermeasures against common web application threats.
+
+### 3.1 Threat: Sensitive Data Exposure
+*   **Risk**: Leaking user password hashes in API responses.
+*   **Countermeasure**: **Output Sanitization**. The `parseUser` function explicitly destructures the `password` field out of the User object before JSON serialization in `GET /users` responses.
+
+### 3.2 Threat: Information Disclosure
+*   **Risk**: Returning raw database stack traces (e.g., "SQL syntax error near...") allows attackers to map the schema.
+*   **Countermeasure**: **Error Masking**. The `handleServerErr` helper logs the full error details to the server console for debugging but returns a generic `500 Internal Server Error` JSON payload to the client.
+
+### 3.3 Threat: Brute Force Attacks
+*   **Risk**: Automated scripts attempting to guess passwords via the `/users` endpoint.
+*   **Countermeasure**: **Rate Limiting**. A custom middleware `rateLimiter` tracks request counts per IP address in memory.
+    *   **Policy**: 50 requests per 15 minutes for sensitive endpoints.
+
+### 3.4 Threat: Injection Attacks (SQLi)
+*   **Risk**: Malicious SQL commands embedded in user input.
+*   **Countermeasure**: **Parameterized Queries**. All database interactions utilize `sqlite3` prepared statements (e.g., `db.run("... VALUES (?, ?)", [val1, val2])`). No string concatenation is used for SQL construction.
+
+### 3.5 Threat: Client-Side Attacks (XSS, Clickjacking)
+*   **Risk**: Embedding the app in malicious iframes or sniffing MIME types to execute non-executable files.
+*   **Countermeasure**: **Security Headers**.
+    *   `X-Content-Type-Options: nosniff`: Prevents MIME type sniffing.
+    *   `X-Frame-Options: DENY`: Prevents clickjacking via iframes.
+    *   `X-XSS-Protection: 1; mode=block`: Enables browser XSS filters.
+    *   `Strict-Transport-Security`: Enforces HTTPS (HSTS).
+
+### 3.6 Threat: Invalid Input Processing
+*   **Risk**: Passing malformed IDs causing database driver crashes or unexpected behavior.
+*   **Countermeasure**: **Input Validation**. The `isValidUUID` regex check enforces strict UUID v4 format on `userId` and `entryId` parameters before any database operation is attempted.

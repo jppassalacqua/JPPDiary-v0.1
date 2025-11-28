@@ -1,6 +1,24 @@
 
 # Development Log
 
+## Security Hardening & Documentation (Turn 3)
+
+**Goal**: Document the security threats identified and the countermeasures implemented in the backend logic.
+
+**Updates**:
+1.  **Security Documentation**:
+    *   Updated `HLD.md`: Added **Security Architecture** section defining principles (Defense in Depth, Sanitization).
+    *   Updated `LLD.md`: Added **Security Implementation** section detailing specific threats (Data Exposure, Info Disclosure, Brute Force, SQLi, XSS) and their corresponding code fixes.
+    *   Updated `README.md`: Added a summary of security features.
+
+**Security Measures Documented**:
+*   **Output Sanitization**: Stripping passwords from API responses.
+*   **Error Masking**: Hiding raw DB errors from clients.
+*   **Rate Limiting**: Throttling requests to prevent brute force.
+*   **Security Headers**: `HSTS`, `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`.
+*   **Input Validation**: Strict UUID regex checks.
+*   **SQL Injection Prevention**: Parameterized queries.
+
 ## Unified Media Management (Turn 2)
 
 **Goal**: Consolidate disparate media handling (images, video, audio) into unified components for input and display.
