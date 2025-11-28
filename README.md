@@ -11,7 +11,7 @@ Built with a "Local-First" philosophy, it runs securely on your machine while le
 
 ### 📝 Smart Journaling
 *   **Rich Text Editor**: Markdown support, tasks, tables, Mermaid diagrams, and internal linking.
-*   **Multi-Modal**: Attach images, draw sketches, or record audio directly in the browser.
+*   **Unified Media Manager**: Seamlessly attach images, videos, audio recordings, and sketches in a single interface.
 *   **AI Companion**: "Interview Mode" asks clarifying questions to flesh out details.
 
 ### 🧠 Deep Analysis

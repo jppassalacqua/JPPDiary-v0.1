@@ -31,12 +31,14 @@ graph TD
 1.  **Frontend (React 19 + Vite)**
     *   **Responsibility**: UI rendering, state management, AI interaction, data visualization.
     *   **Key Tech**: TypeScript, Tailwind, Recharts, Leaflet/Google Maps.
+    *   **Media Handling**: `MediaManager` consolidates Camera, Audio, and Drawing inputs; `MediaGallery` standardizes display.
 
 2.  **Backend (Node.js + Express)**
     *   **Responsibility**: Persistence layer, system administration, static asset serving.
     *   **Key Tech**: SQLite3, Express, Node-Windows.
+    *   **Auto-Cataloging**: Automatically extracts entities from entries and links them in the database for graph analysis.
 
-3.  **Interception Layer (New)**
+3.  **Interception Layer**
     *   **Responsibility**: Capturing all data modification events (CUD) and application errors.
     *   **Implementation**: A wrapper around the Database Service (`services/db.ts`) that hooks into every save/delete call to generate audit logs transparently.
 
@@ -44,7 +46,13 @@ graph TD
 
 ### 3.1 Data Storage
 *   **Primary**: SQLite database file (`gemini_diary.db`).
-*   **Logging**: A dedicated `logs` table stores structured audit data (Level, Source, Message, JSON Payload).
+*   **Schema**: Fully Normalized Relational Model.
+    *   `entries`: Core text and metadata.
+    *   `media`: Binary data (Images/Audio).
+    *   `catalog`: Entities extracted from entries.
+    *   `entry_entities`: Junction table linking memories to concepts.
+    *   `tags`: Normalized user-defined tags.
+    *   `logs`: System audit trail.
 
 ### 3.2 Security
 *   **Authentication**: Session-based via LocalStorage tokens.
@@ -59,6 +67,8 @@ graph TD
 | **Geo-Life** | Map visualization | Google Maps / Leaflet + Clustering |
 | **Audit Logging** | System-wide event tracking | Interception Pattern in DB Service |
 | **RAG Chat** | "Talk to your Diary" | Context window construction |
+| **Unified Media** | Audio/Video/Image/Draw | `MediaManager` Component |
+| **Cataloging** | Entity extraction & linking | Auto-Cataloging Backend Logic |
 
 ## 5. Deployment Strategy
 The application supports multiple deployment targets:
