@@ -1,14 +1,12 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/db';
 import { DiaryEntry, EntryMode, ChatMessage } from '../types';
-import { Save, X, Loader2, ImagePlus, PenTool, Camera, Volume2, Trash2 } from 'lucide-react';
+import { Save, X, Loader2 } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
 import { TagInput } from './TagInput';
-import { AudioRecorder } from './AudioRecorder';
-import { DrawingCanvas } from './DrawingCanvas';
-import { CameraCapture } from './CameraCapture';
+import { MediaManager } from './MediaManager';
 import { EntryMetadata } from './EntryMetadata';
 import { useTranslation } from '../services/translations';
 
@@ -41,20 +39,15 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
   const [location, setLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [locationDetails, setLocationDetails] = useState<{address?: string, city?: string, country?: string}>({});
 
-  // Media State
-  const [images, setImages] = useState<string[]>([]);
+  // Media State (Unified)
+  const [images, setImages] = useState<string[]>([]); // Stores Images AND Videos (Base64)
   const [audio, setAudio] = useState<string[]>([]);
   
   // UI State
   const [isSaving, setIsSaving] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   // Data for Autocomplete
   const [existingEntries, setExistingEntries] = useState<DiaryEntry[]>([]);
-
-  // Refs
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialization
   useEffect(() => {
@@ -105,7 +98,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
     init();
   }, [initialEntry, user]);
 
-  // Autosave (only if autosaveKey is present and not editing an existing entry)
+  // Autosave
   useEffect(() => {
       if (autosaveKey && user && !initialEntry) {
           const timer = setTimeout(() => {
@@ -128,7 +121,6 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
               images,
               audio
           });
-          // Clear draft if successful and in creation mode
           if (autosaveKey && user) db.clearDraft(user.id);
       } catch (e) {
           console.error(e);
@@ -137,44 +129,9 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
       }
   };
 
-  // Media Handlers
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (files && files.length > 0) {
-          Array.from(files).forEach((file: File) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                  if (reader.result) setImages(prev => [...prev, reader.result as string]);
-              };
-              reader.readAsDataURL(file);
-          });
-      }
-      e.target.value = ''; // Reset input
-  };
-
-  const removeImage = (index: number) => {
-      setImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const removeAudio = (index: number) => {
-      setAudio(prev => prev.filter((_, i) => i !== index));
-  };
-
   return (
     <div className="flex flex-col h-full gap-4 relative animate-fade-in">
-        {/* Modals */}
-        {isDrawing && (
-            <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
-                <div className="w-full max-w-4xl h-[80vh]">
-                    <DrawingCanvas onSave={(base64) => { setImages(p => [...p, base64]); setIsDrawing(false); }} onClose={() => setIsDrawing(false)} />
-                </div>
-            </div>
-        )}
-        {isCameraOpen && (
-            <CameraCapture onCapture={(base64) => setImages(p => [...p, base64])} onClose={() => setIsCameraOpen(false)} />
-        )}
-
-        {/* Header: Date/Location + Actions */}
+        {/* Header */}
         <div className="flex flex-col xl:flex-row gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
             <div className="flex-1">
                 <EntryMetadata 
@@ -220,56 +177,14 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
                 <TagInput tags={tags} onChange={setTags} />
             </div>
 
-            {/* Audio Manager */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Audio ({audio.length})</label>
-                <div className="mb-3"><AudioRecorder onSave={(base64) => setAudio(p => [...p, base64])} /></div>
-                {audio.length > 0 && (
-                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar">
-                        {audio.map((src, idx) => (
-                            <div key={idx} className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
-                                <audio src={src} controls className="h-6 w-24" />
-                                <button onClick={() => removeAudio(idx)} className="text-slate-400 hover:text-red-500"><X size={14}/></button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Image Manager (Full Width on mobile, span 2 on md) */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 col-span-1 md:col-span-2">
-                <div className="flex justify-between items-center mb-4">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Images ({images.length})</label>
-                    <div className="flex gap-2">
-                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                            <ImagePlus size={14} className="text-indigo-500" /><span className="text-xs font-medium text-slate-700 dark:text-slate-300">Upload</span>
-                            <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
-                        </label>
-                        <button onClick={() => setIsDrawing(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                            <PenTool size={14} className="text-purple-500" /><span className="text-xs font-medium text-slate-700 dark:text-slate-300">Draw</span>
-                        </button>
-                        <button onClick={() => setIsCameraOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                            <Camera size={14} className="text-emerald-500" /><span className="text-xs font-medium text-slate-700 dark:text-slate-300">Camera</span>
-                        </button>
-                    </div>
-                </div>
-                
-                {images.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                        {images.map((src, idx) => (
-                            <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-black">
-                                <img src={src} alt="attachment" className="w-full h-full object-cover" />
-                                <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md">
-                                    <Trash2 size={12} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 text-xs">
-                        No images attached
-                    </div>
-                )}
+            {/* Unified Media Manager */}
+            <div className="col-span-1 md:col-span-2">
+                <MediaManager 
+                    images={images} 
+                    setImages={setImages} 
+                    audio={audio} 
+                    setAudio={setAudio} 
+                />
             </div>
         </div>
     </div>

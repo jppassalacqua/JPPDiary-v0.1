@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -31,6 +30,7 @@ const Dashboard: React.FC = () => {
     selectedMoods: [],
     selectedTags: [],
     selectedEntities: [],
+    selectedEntityTypes: [],
     selectedCountries: [],
     selectedCities: [],
     media: []
@@ -74,9 +74,15 @@ const Dashboard: React.FC = () => {
 
   const availableEntities = useMemo(() => {
       const entities = new Set<string>();
-      entries.forEach(e => e.analysis.entities?.forEach(ent => entities.add(ent.name)));
+      entries.forEach(e => e.analysis.entities?.forEach(ent => {
+          // Filter entities based on Selected Entity Types if any are selected
+          if (filters.selectedEntityTypes.length > 0) {
+              if (!filters.selectedEntityTypes.includes(ent.type)) return;
+          }
+          entities.add(ent.name);
+      }));
       return Array.from(entities).sort();
-  }, [entries]);
+  }, [entries, filters.selectedEntityTypes]);
 
   // Derived locations for filter
   const availableCountries = useMemo(() => {

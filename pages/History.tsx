@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useConfig } from '../context/ConfigContext';
@@ -11,6 +12,7 @@ import { searchService } from '../services/searchService';
 import { markdownService } from '../services/markdown';
 import { useLocation } from 'react-router-dom';
 import { EntryEditor } from '../components/EntryEditor';
+import { MediaGallery } from '../components/MediaGallery';
 import { appConfig } from '../config/appConfig';
 
 declare global {
@@ -38,6 +40,7 @@ const History: React.FC = () => {
       selectedMoods: [],
       selectedTags: [],
       selectedEntities: [],
+      selectedEntityTypes: [],
       selectedCountries: [],
       selectedCities: [],
       media: []
@@ -84,7 +87,7 @@ const History: React.FC = () => {
       }
       if (state?.entryIds && Array.isArray(state.entryIds)) {
           setFilterIds(state.entryIds);
-          setFilters({ startDate: '', endDate: '', text: '', selectedMoods: [], selectedTags: [], selectedEntities: [], selectedCountries: [], selectedCities: [], media: [] });
+          setFilters({ startDate: '', endDate: '', text: '', selectedMoods: [], selectedTags: [], selectedEntities: [], selectedEntityTypes: [], selectedCountries: [], selectedCities: [], media: [] });
       }
   }, [location.state]);
 
@@ -152,11 +155,19 @@ const History: React.FC = () => {
     entries.forEach(e => e.analysis.manualTags?.forEach(t => tags.add(t)));
     return Array.from(tags).sort();
   }, [entries]);
+  
   const availableEntities = useMemo(() => {
       const entities = new Set<string>();
-      entries.forEach(e => e.analysis.entities?.forEach(ent => entities.add(ent.name)));
+      entries.forEach(e => e.analysis.entities?.forEach(ent => {
+          // Filter entities based on Selected Entity Types if any are selected
+          if (filters.selectedEntityTypes.length > 0) {
+              if (!filters.selectedEntityTypes.includes(ent.type)) return;
+          }
+          entities.add(ent.name);
+      }));
       return Array.from(entities).sort();
-  }, [entries]);
+  }, [entries, filters.selectedEntityTypes]);
+
   const availableCountries = useMemo(() => {
     const s = new Set<string>();
     entries.forEach(e => { if (e.country) s.add(e.country); });
@@ -198,8 +209,6 @@ const History: React.FC = () => {
       newAnalysis = await geminiService.analyzeEntry(data.content, user?.preferences || 'English', aiConfig);
     } catch (error) {
       console.warn("AI analysis failed, preserving old analysis with new tags.", error);
-      // We can update the summary to indicate it might be stale, or just leave it.
-      // For now, we reuse the old analysis object but will update manual tags below.
     }
 
     try {
@@ -384,9 +393,22 @@ const History: React.FC = () => {
                             ))}
                             {selectedEntry.analysis.manualTags?.map((t, i) => (<span key={`manual-${i}`} className="text-xs font-medium px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-500/30">#{t}</span>))}
                         </div>
-                        <div className="mb-8 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 dark:from-indigo-900/20 dark:to-purple-900/20 dark:border-indigo-500/20 rounded-xl flex gap-4"><div className="mt-1 text-indigo-600 dark:text-indigo-400"><Sparkles size={20} /></div><div><h5 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-1">{t('aiInsight')}</h5><p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{selectedEntry.analysis.summary}</p></div></div>
-                        {selectedEntry.audio && selectedEntry.audio.length > 0 && (<div className="mb-6 flex flex-wrap gap-3">{selectedEntry.audio.map((src, idx) => (<div key={idx} className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-200 dark:border-slate-800"><audio src={src} controls className="h-8" /></div>))}</div>)}
-                        {(selectedEntry.images && selectedEntry.images.length > 0) ? (<div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4">{selectedEntry.images.map((img, idx) => (<div key={idx} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md"><img src={img} alt={`Attachment ${idx + 1}`} className="w-full h-48 object-cover" /></div>))}</div>) : selectedEntry.image && (<div className="mb-8 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg"><img src={selectedEntry.image} alt="Entry attachment" className="w-full h-auto max-h-[400px] object-cover" /></div>)}
+                        
+                        <div className="mb-8 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 dark:from-indigo-900/20 dark:to-purple-900/20 dark:border-indigo-500/20 rounded-xl flex gap-4">
+                            <div className="mt-1 text-indigo-600 dark:text-indigo-400"><Sparkles size={20} /></div>
+                            <div>
+                                <h5 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-1">{t('aiInsight')}</h5>
+                                <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{selectedEntry.analysis.summary}</p>
+                            </div>
+                        </div>
+
+                        {/* Unified Media Gallery */}
+                        <div className="mb-8">
+                            <MediaGallery 
+                                images={selectedEntry.images && selectedEntry.images.length > 0 ? selectedEntry.images : (selectedEntry.image ? [selectedEntry.image] : [])} 
+                                audio={selectedEntry.audio} 
+                            />
+                        </div>
                         
                         <div id="history-content-container" className="prose dark:prose-invert max-w-none leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: selectedEntry.mode === EntryMode.Manual ? markdownService.render(selectedEntry.content) : '' }} />
                         {selectedEntry.mode === EntryMode.Chat && (

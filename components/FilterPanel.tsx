@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Filter, X, Calendar, Hash, Smile, Search, MapPin, ChevronDown, Check, Users, Maximize2, Paperclip } from 'lucide-react';
+import { Filter, X, Calendar, Hash, Smile, Search, MapPin, ChevronDown, Check, Users, Paperclip, Box } from 'lucide-react';
 import { Mood } from '../types';
 import { useTranslation } from '../services/translations';
 
@@ -12,6 +11,7 @@ export interface FilterState {
   selectedMoods: string[];
   selectedTags: string[];
   selectedEntities: string[];
+  selectedEntityTypes: string[]; // Added
   selectedCountries: string[];
   selectedCities: string[];
   media: string[]; // 'hasImage' | 'hasAudio' | 'hasLocation'
@@ -132,7 +132,7 @@ const SearchModal = ({
     );
 };
 
-// --- Advanced MultiSelect Component ---
+// --- Advanced MultiSelect Component (Direct Modal Mode) ---
 const MultiSelect = ({ 
   label, 
   icon: Icon, 
@@ -148,50 +148,26 @@ const MultiSelect = ({
   onChange: (item: string) => void,
   renderLabel: (item: string) => string
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [filterText, setFilterText] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Filter options locally for dropdown
-  const filteredOptions = useMemo(() => {
-      const term = filterText.toLowerCase();
-      return options.filter(opt => renderLabel(opt).toLowerCase().includes(term));
-  }, [options, filterText, renderLabel]);
-
-  // Show only first 8 items in dropdown to keep it clean
-  const DISPLAY_LIMIT = 8;
-  const displayOptions = filteredOptions.slice(0, DISPLAY_LIMIT);
-  const hasMore = filteredOptions.length > DISPLAY_LIMIT;
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative">
       <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1 mb-1">
         <Icon size={14} /> {label}
       </label>
       
       <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors"
+        onClick={() => setShowModal(true)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hover:bg-white dark:hover:bg-slate-700/50"
       >
         <span className="truncate">
           {selected.length === 0 ? "Select..." : `${selected.length} selected`}
         </span>
-        <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className="text-slate-400" />
       </button>
 
       {/* Selected Chips (Preview) */}
-      {selected.length > 0 && !isOpen && (
+      {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">
           {selected.slice(0, 5).map(item => (
             <span key={item} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-500/30 text-[10px] font-medium max-w-[150px] truncate">
@@ -206,60 +182,6 @@ const MultiSelect = ({
           ))}
           {selected.length > 5 && (
               <span className="text-[10px] text-slate-400 self-center">+{selected.length - 5} more</span>
-          )}
-        </div>
-      )}
-
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl animate-fade-in overflow-hidden">
-          
-          {/* Internal Search Input */}
-          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-              <input 
-                type="text" 
-                value={filterText}
-                onChange={e => setFilterText(e.target.value)}
-                placeholder="Filter..." 
-                className="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-lg px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500"
-                autoFocus
-              />
-          </div>
-
-          <div className="max-h-60 overflow-y-auto custom-scrollbar">
-            {displayOptions.length > 0 ? (
-                displayOptions.map(option => (
-                <div 
-                    key={option}
-                    onClick={() => onChange(option)}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-sm text-slate-700 dark:text-slate-300 border-b border-slate-50 dark:border-slate-800 last:border-0"
-                >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                    selected.includes(option) 
-                        ? 'bg-indigo-600 border-indigo-600 text-white' 
-                        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                    }`}>
-                    {selected.includes(option) && <Check size={10} strokeWidth={3} />}
-                    </div>
-                    <span className="truncate">{renderLabel(option)}</span>
-                </div>
-                ))
-            ) : (
-                <div className="px-4 py-3 text-sm text-slate-500 text-center">No matching options</div>
-            )}
-          </div>
-
-          {/* Show More / Advanced Search Button */}
-          {(hasMore || options.length > DISPLAY_LIMIT) && (
-              <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                  <button 
-                    onClick={() => { setIsOpen(false); setShowModal(true); }}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
-                  >
-                      <Maximize2 size={12} />
-                      {hasMore ? `Show all ${filteredOptions.length} results` : 'Open Full Search'}
-                  </button>
-              </div>
           )}
         </div>
       )}
@@ -310,6 +232,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       selectedMoods: [],
       selectedTags: [],
       selectedEntities: [],
+      selectedEntityTypes: [],
       selectedCountries: [],
       selectedCities: [],
       media: []
@@ -411,6 +334,18 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           />
         </div>
 
+        {/* Entity Types Dropdown */}
+        <div className="col-span-1">
+          <MultiSelect 
+            label="Entity Type"
+            icon={Box}
+            options={['Person', 'Location', 'Event', 'Concept', 'Book', 'Movie', 'Other']}
+            selected={filters.selectedEntityTypes || []}
+            onChange={(item) => toggleSelection('selectedEntityTypes', item)}
+            renderLabel={(type) => t('cat_' + type)}
+          />
+        </div>
+
         {/* Tags Dropdown */}
         <div className="col-span-1">
           <MultiSelect 
@@ -423,8 +358,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           />
         </div>
 
-        {/* Media & Context Filter (New) */}
-        <div className="col-span-1 md:col-span-2">
+        {/* Media & Context Filter */}
+        <div className="col-span-1">
             <MultiSelect 
                 label={t('mediaFilter')}
                 icon={Paperclip}

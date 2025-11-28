@@ -1,5 +1,6 @@
 
 
+
 /**
  * A lightweight Markdown parser to avoid external dependencies.
  * Handles: Headers, Bold, Italic, Strikethrough, Highlight, Tables, Mermaid, Lists, Quotes, Code, Links, Images, Sup, Sub, Footnotes.
@@ -29,9 +30,13 @@ export const markdownService = {
     // 4. Links
     // 4a. Internal Entry Links (entry:uuid) - No target=_blank, special styling
     html = html.replace(/\[([^\]]+)\]\((entry:[^)]+)\)/g, '<a href="$2" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer inline-flex items-center gap-1" data-internal-link="true"><span class="text-[10px] opacity-70">🔗</span>$1</a>');
-    // 4b. External Links ([title](url)) - Standard
+    
+    // 4b. Graph Visualization Links (graph:params) - Button Style
+    html = html.replace(/\[([^\]]+)\]\((graph:[^)]+)\)/g, '<a href="$2" class="inline-flex items-center gap-1.5 mx-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium hover:bg-purple-200 shadow-sm border border-purple-200 dark:border-purple-800 cursor-pointer no-underline" data-graph-link="true"><span class="text-[10px]">🕸️</span>$1</a>');
+
+    // 4c. External Links ([title](url)) - Standard
     html = html.replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">$1</a>');
-    // 4c. Generic/Relative Links Fallback
+    // 4d. Generic/Relative Links Fallback
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">$1</a>');
 
     // 5. Headers (H1 - H6)

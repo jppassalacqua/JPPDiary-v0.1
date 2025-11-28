@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/db';
@@ -75,6 +74,7 @@ const MapView: React.FC = () => {
     selectedMoods: [],
     selectedTags: [],
     selectedEntities: [],
+    selectedEntityTypes: [],
     selectedCountries: [],
     selectedCities: [],
     media: []
@@ -422,10 +422,16 @@ const MapView: React.FC = () => {
   const availableEntities = useMemo(() => {
     const entities = new Set<string>();
     entries.forEach(e => {
-        e.analysis.entities?.forEach(ent => entities.add(ent.name));
+        e.analysis.entities?.forEach(ent => {
+            // Filter entities based on Selected Entity Types if any are selected
+            if (filters.selectedEntityTypes.length > 0) {
+                if (!filters.selectedEntityTypes.includes(ent.type)) return;
+            }
+            entities.add(ent.name);
+        });
     });
     return Array.from(entities).sort();
-  }, [entries]);
+  }, [entries, filters.selectedEntityTypes]);
 
   const availableCountries = useMemo(() => {
     const s = new Set<string>();

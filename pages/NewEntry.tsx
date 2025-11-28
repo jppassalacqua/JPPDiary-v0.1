@@ -10,6 +10,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../services/translations';
 import { EntryEditor } from '../components/EntryEditor';
 import { AudioRecorder } from '../components/AudioRecorder';
+import { SpeechInput } from '../components/SpeechInput';
+import { TextToSpeech } from '../components/TextToSpeech';
 
 const NewEntry: React.FC = () => {
   const { user } = useAuth();
@@ -140,7 +142,14 @@ const NewEntry: React.FC = () => {
                {chatHistory.length === 0 && <div className="text-center text-slate-500 mt-10"><p>{t('chatStart')}</p></div>}
                {chatHistory.map((msg, idx) => (
                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 rounded-bl-none'}`}>{msg.text}</div>
+                   <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 rounded-bl-none'}`}>
+                        <div className="flex items-start gap-2">
+                            <div>{msg.text}</div>
+                            <div className="mt-1 opacity-70">
+                                <TextToSpeech text={msg.text} size={14} className={msg.role === 'user' ? 'text-white/70 hover:text-white hover:bg-white/20' : ''} />
+                            </div>
+                        </div>
+                   </div>
                  </div>
                ))}
                {isProcessing && <div className="flex justify-start animate-fade-in"><div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-bl-none flex items-center gap-1.5"><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'300ms'}}></div></div></div>}
@@ -159,6 +168,7 @@ const NewEntry: React.FC = () => {
             <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
               <div className="flex gap-2">
                 <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isProcessing && handleSendMessage()} placeholder={isProcessing ? "AI is replying..." : t('chatPlaceholder')} disabled={isProcessing} className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50" />
+                <SpeechInput onSpeechResult={(text) => setChatInput(prev => prev + " " + text)} />
                 <button onClick={handleSendMessage} disabled={isProcessing || !chatInput.trim()} className="p-3 bg-indigo-600 rounded-xl text-white hover:bg-indigo-50 disabled:opacity-50 transition-colors">{isProcessing ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}</button>
               </div>
               <div className="flex justify-between items-center">

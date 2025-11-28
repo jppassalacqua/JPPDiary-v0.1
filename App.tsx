@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, HashRouter, MemoryRouter } from 'react-router-
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ConfigProvider } from './context/ConfigContext';
+import { SessionProvider } from './context/SessionContext';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import NewEntry from './pages/NewEntry';
@@ -95,11 +96,13 @@ const App: React.FC = () => {
   return (
     <ConfigProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </ThemeProvider>
+        </SessionProvider>
       </AuthProvider>
     </ConfigProvider>
   );

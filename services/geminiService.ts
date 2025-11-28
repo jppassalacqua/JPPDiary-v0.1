@@ -1,4 +1,6 @@
 
+
+
 import { GoogleGenAI, Type, Schema, Content } from '@google/genai';
 import { AnalysisResult, ChatMessage, DiaryEntry, UserPreferences, AiConfig } from '../types';
 import { appConfig } from '../config/appConfig';
@@ -229,20 +231,32 @@ export const geminiService = {
   ): Promise<string> => {
       try {
           const language = typeof prefsOrLang === 'string' ? prefsOrLang : (prefsOrLang.language || 'English');
-          const entryContext = allEntries.map(e => `ID:${e.id}|Date:${new Date(e.timestamp).toLocaleDateString()}|Mood:${e.analysis.mood}|Sum:${e.analysis.summary}`).join("\n");
-          const systemPrompt = `Role: Data Analyst. Access to diary provided.\nCONTEXT: ${stats}\nENTRIES:\n${entryContext}\nQuery: ${newMessage}\nLang: ${language}`;
+          
+          // Get the centralized prompt from config
+          let systemPromptTemplate = (appConfig.prompts.dataAnalysis as any)[language] || (appConfig.prompts.dataAnalysis as any)['English'];
+          
+          const entryContext = allEntries.map(e => `ID:${e.id}|Date:${new Date(e.timestamp).toLocaleDateString()}|Mood:${e.analysis.mood}|Sum:${e.analysis.summary}|Tags:${(e.analysis.manualTags||[]).join(',')}|Entities:${(e.analysis.entities||[]).map(x=>x.name).join(',')}`).join("\n");
+          
+          const fullSystemPrompt = `${systemPromptTemplate}
+
+CONTEXT STATS: ${stats}
+ENTRIES:
+${entryContext}
+
+Query: ${newMessage}
+Language: ${language}`;
 
           if (config.provider === 'local') {
-              const messages = [...history.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })), { role: "user", content: systemPrompt }];
+              const messages = [...history.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })), { role: "user", content: fullSystemPrompt }];
               return await callLocalLLM(config, messages);
           } else {
               const ai = getClient(config);
               const chat = ai.chats.create({
                   model: CHAT_MODEL,
                   history: history.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })),
-                  config: { systemInstruction: "Analyze user data." }
+                  config: { systemInstruction: "Analyze user data and patterns." }
               });
-              const result = await chat.sendMessage({ message: systemPrompt });
+              const result = await chat.sendMessage({ message: fullSystemPrompt });
               return result.text || "";
           }
       } catch (error) {

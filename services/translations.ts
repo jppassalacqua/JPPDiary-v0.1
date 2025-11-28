@@ -89,6 +89,15 @@ const translations: Record<Language, Dictionary> = {
     askPlaceholder: "e.g., 'What makes me anxious usually?' or 'Show me memories about Paris'",
     contextLoaded: "{count} memories loaded into context.",
     
+    // Session Management
+    saveSession: "Save Session",
+    newSession: "New Session",
+    recents: "Recents (10)",
+    historySession: "History",
+    confirmReset: "Start a new session? Unsaved chat will be lost.",
+    sessionSaved: "Conversation saved as a new entry.",
+    loadSession: "Load",
+    
     // Catalog Types
     cat_Person: "Person",
     cat_Location: "Location",
@@ -309,6 +318,15 @@ const translations: Record<Language, Dictionary> = {
     askDesc: "Discutez avec votre historique complet. Cherchez des tendances ou des souvenirs précis.",
     askPlaceholder: "ex: 'Qu'est-ce qui me rend anxieux ?' ou 'Montre-moi les souvenirs de Paris'",
     contextLoaded: "{count} souvenirs chargés dans le contexte.",
+
+    // Session Management
+    saveSession: "Sauvegarder",
+    newSession: "Nouvelle Session",
+    recents: "Récents (10)",
+    historySession: "Historique",
+    confirmReset: "Nouvelle session ? Les échanges non sauvegardés seront perdus.",
+    sessionSaved: "Conversation sauvegardée comme nouvelle entrée.",
+    loadSession: "Charger",
 
     // Catalog Types
     cat_Person: "Personne",

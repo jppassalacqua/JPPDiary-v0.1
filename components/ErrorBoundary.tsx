@@ -12,6 +12,9 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
+  // Explicitly declare props to resolve TS error
+  declare props: Readonly<Props>;
+
   public state: State = {
     hasError: false,
     error: null,

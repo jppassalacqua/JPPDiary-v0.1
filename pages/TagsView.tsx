@@ -100,6 +100,11 @@ const TagsView: React.FC = () => {
       setRenameInput(tag);
   };
 
+  const handleTagDoubleClick = (tag: string) => {
+      if (editingTag === tag) return;
+      navigate('/history', { state: { filterTag: tag } });
+  };
+
   const confirmRename = async () => {
       if (!user || !editingTag || !renameInput.trim() || renameInput === editingTag) {
           setEditingTag(null);
@@ -270,11 +275,13 @@ const TagsView: React.FC = () => {
                 {tagStats.map(({ tag, count }) => (
                     <div 
                         key={tag}
+                        onDoubleClick={() => handleTagDoubleClick(tag)}
                         className={`group flex items-center justify-between pl-4 pr-2 py-2 border rounded-xl transition-colors ${
                             editingTag === tag 
                             ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-500/30'
-                            : 'bg-slate-50 hover:bg-white border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:hover:bg-slate-800'
+                            : 'bg-slate-50 hover:bg-white border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:hover:bg-slate-800 cursor-pointer select-none'
                         }`}
+                        title={editingTag !== tag ? t('viewEntries') : undefined}
                     >
                         {editingTag === tag ? (
                             <div className="flex items-center gap-2 w-full">
@@ -300,14 +307,14 @@ const TagsView: React.FC = () => {
                                 </div>
                                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button 
-                                        onClick={() => handleRenameClick(tag)}
+                                        onClick={(e) => { e.stopPropagation(); handleRenameClick(tag); }}
                                         className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
                                         title={t('renameTag')}
                                     >
                                         <Edit2 size={14} />
                                     </button>
                                     <button 
-                                        onClick={() => confirmDelete(tag, count)}
+                                        onClick={(e) => { e.stopPropagation(); confirmDelete(tag, count); }}
                                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                                         title={t('deleteTag')}
                                     >

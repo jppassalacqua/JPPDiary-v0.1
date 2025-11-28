@@ -1,5 +1,4 @@
-
-import { DiaryEntry } from '../types';
+import { DiaryEntry, CatalogItemType } from '../types';
 import { FilterState } from '../components/FilterPanel';
 
 export const searchService = {
@@ -58,7 +57,14 @@ export const searchService = {
                 if (!hasEntity) return false;
             }
 
-            // 6. Location (OR logic)
+            // 6. Entity Types (OR logic) - NEW
+            if (filters.selectedEntityTypes && filters.selectedEntityTypes.length > 0) {
+                const entryEntityTypes = entry.analysis.entities?.map(e => e.type) || [];
+                const hasType = filters.selectedEntityTypes.some(type => entryEntityTypes.includes(type as CatalogItemType));
+                if (!hasType) return false;
+            }
+
+            // 7. Location (OR logic)
             if (filters.selectedCountries.length > 0) {
                 if (!entry.country || !filters.selectedCountries.includes(entry.country)) return false;
             }
@@ -66,7 +72,7 @@ export const searchService = {
                 if (!entry.city || !filters.selectedCities.includes(entry.city)) return false;
             }
 
-            // 7. Media & Context (AND logic relative to specific filters selected)
+            // 8. Media & Context (AND logic relative to specific filters selected)
             // If "Has Image" is selected, entry MUST have image.
             if (filters.media && filters.media.length > 0) {
                 if (filters.media.includes('hasImage')) {

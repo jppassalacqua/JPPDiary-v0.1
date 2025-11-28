@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bold, 
@@ -33,6 +32,7 @@ import { markdownService } from '../services/markdown';
 import { useTranslation } from '../services/translations';
 import { EntryPicker } from './EntryPicker';
 import { DiaryEntry } from '../types';
+import { SpeechInput } from './SpeechInput';
 
 interface RichTextEditorProps {
   initialValue: string;
@@ -134,6 +134,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ initialValue, on
       setShowEntryPicker(false);
   };
 
+  const handleSpeechResult = (text: string) => {
+      insertSyntax(text + ' ');
+  };
+
   const ToolbarButton = ({ icon: Icon, onClick, title, label }: any) => (
     <button
       onClick={onClick}
@@ -210,9 +214,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ initialValue, on
                 <ToolbarButton icon={Heading1} onClick={() => insertBlock('# ')} title="H1" />
                 <ToolbarButton icon={Heading2} onClick={() => insertBlock('## ')} title="H2" />
                 <ToolbarButton icon={Heading3} onClick={() => insertBlock('### ')} title="H3" />
-                <div className="hidden md:flex">
-                    <ToolbarButton icon={Heading4} onClick={() => insertBlock('#### ')} title="H4" />
-                </div>
              </div>
 
              {/* Lists */}
@@ -230,13 +231,18 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ initialValue, on
              </div>
 
              {/* Extended (Table, Mermaid, Link, Image) */}
-             <div className="flex items-center gap-0.5">
+             <div className="flex items-center gap-0.5 border-r border-slate-300 dark:border-slate-700 pr-2 mr-1">
                 <ToolbarButton icon={LinkIcon} onClick={() => insertSyntax('[', '](url)')} title={t('tool_link')} />
                 <ToolbarButton icon={FileSymlink} onClick={() => setShowEntryPicker(true)} title={t('tool_link_entry')} />
                 <ToolbarButton icon={ImageIcon} onClick={() => insertSyntax('![Alt text](', ')')} title={t('tool_image')} />
                 <ToolbarButton icon={Table} onClick={() => insertTemplate('| Head | Head |\n|---|---|\n| Cell | Cell |')} title={t('tool_table')} />
                 <ToolbarButton icon={Network} onClick={() => insertTemplate('```mermaid\ngraph TD;\n    A-->B;\n    A-->C;\n```')} title={t('tool_mermaid')} />
                 <ToolbarButton icon={Minus} onClick={() => insertBlock('---')} title={t('tool_hr')} />
+             </div>
+
+             {/* STT */}
+             <div className="flex items-center gap-0.5 pl-1">
+                 <SpeechInput onSpeechResult={handleSpeechResult} className="hover:bg-slate-200 dark:hover:bg-slate-700" />
              </div>
           </div>
         )}
